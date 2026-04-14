@@ -40,6 +40,8 @@
     }
   }
 
+
+
   .footer-container {
     padding: 16px 0;
   }
@@ -53,11 +55,36 @@
   }
 
   .footer-info {
-      font-size: 14px;
-      color: #979595;
-      font-weight: 500;
+    font-size: 14px;
+    color: #979595;
+    font-weight: 500;
+  }
+}
+
+.backup-restore-row {
+  ion-list {
+    background: transparent;
+
+    ion-item {
+      --background: #333333;
+      border-radius: 1.5rem;
+      transition: background 0.2s;
+      margin: 10px 0;
+
+      ion-icon {
+        color: #0bbab5;
+      }
+    }
+
+    h2 {
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0px;
+      white-space: nowrap;
     }
   }
+}
 
 .sign-transaction {
   .logo {

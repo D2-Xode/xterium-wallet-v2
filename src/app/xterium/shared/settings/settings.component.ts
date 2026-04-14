@@ -44,7 +44,10 @@ import {
   logoDiscord,
   starOutline,
   keypadOutline,
-  lockClosedOutline
+  lockClosedOutline,
+  swapVerticalOutline,
+  cloudUploadOutline,
+  cloudDownloadOutline
 } from 'ionicons/icons';
 
 import { CurrencyComponent } from './currency/currency.component';
@@ -71,6 +74,7 @@ import { EncryptionService } from 'src/app/api/encryption/encryption.service';
 import { AppVersionService } from 'src/app/api/app-version/app-version.service';
 
 import { TranslatePipe } from '@ngx-translate/core';
+import { RestoreComponent } from '../restore/restore.component';
 
 @Component({
   selector: 'app-settings',
@@ -93,7 +97,6 @@ import { TranslatePipe } from '@ngx-translate/core';
     IonModal,
     IonToggle,
     IonLabel,
-    IonSpinner,
     CurrencyComponent,
     LanguageComponent,
     TranslatePipe,
@@ -104,13 +107,16 @@ import { TranslatePipe } from '@ngx-translate/core';
     BiometricLoginComponent,
     BiometricSetupComponent,
     BackupComponent,
+    RestoreComponent,
   ]
 })
 
 export class SettingsComponent implements OnInit {
   @ViewChild('currencyModal', { read: IonModal }) currencyModal!: IonModal;
   @ViewChild('languageModal', { read: IonModal }) languageModal!: IonModal;
+  @ViewChild('backupAndRestoreModal', { read: IonModal }) backupAndRestoreModal!: IonModal;
   @ViewChild('backupModal', { read: IonModal }) backupModal!: IonModal;
+  @ViewChild('restoreModal', { read: IonModal }) restoreModal!: IonModal;
   @ViewChild('confirmBiometricModal', { read: IonModal }) confirmBiometricModal!: IonModal;
   @ViewChild('confirmChangePinModal', { read: IonModal }) confirmChangePinModal!: IonModal;
   @ViewChild('confirmChangePasswordModal', { read: IonModal }) confirmChangePasswordModal!: IonModal;
@@ -147,6 +153,9 @@ export class SettingsComponent implements OnInit {
       starOutline,
       keypadOutline,
       lockClosedOutline,
+      swapVerticalOutline,
+      cloudUploadOutline,
+      cloudDownloadOutline,
     });
   }
 
@@ -175,11 +184,20 @@ export class SettingsComponent implements OnInit {
   changePasswordState: 'password' | 'setup-password' | null = null;
 
   isBackupProcessing: boolean = false;
+  isRestoreProcessing: boolean = false;
 
   appVersion: string = '';
 
+  async openBackupAndRestoreModal() {
+    this.backupAndRestoreModal.present();
+  }
+
   async openBackupModal() {
     this.backupModal.present();
+  }
+
+  async openRestoreModal() {
+    this.restoreModal.present();
   }
 
   async confirmLogout() {

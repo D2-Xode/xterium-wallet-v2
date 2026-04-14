@@ -1,0 +1,36 @@
+ion-list {
+  background: transparent;
+
+  ion-item.pin-item {
+    --background: transparent;
+    --padding-top: 0px;
+    --padding-bottom: 0px;
+    --padding-start: 0px;
+    --padding-end: 0px;
+    --inner-padding-start: 0px;
+    --inner-padding-end: 0px;
+
+    margin-bottom: 10px;
+
+    .pin-input-wrapper {
+      width: 100%;
+    }
+
+    .input-otp-fill-solid.pin-input {
+      --border-color: #777777;
+      --highlight-color-focused: #0bbab5;
+      --border-radius: 1.5rem;
+
+      font-weight: bold;
+    }
+  }
+}
+
+.security-tips {
+  color: var(--ion-color-medium);
+
+  ion-icon {
+    margin-right: 8px;
+    color: var(--ion-color-success);
+  }
+}

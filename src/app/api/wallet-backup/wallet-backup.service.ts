@@ -3,199 +3,227 @@ import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { Capacitor } from '@capacitor/core';
-
 import { SocialLogin } from '@capgo/capacitor-social-login';
 
 import { WalletsService } from '../wallets/wallets.service';
 import { EncryptionService } from '../encryption/encryption.service';
-
 import { Wallet } from 'src/models/wallet.model';
 
-@Injectable({
-  providedIn: 'root',
-})
+export interface BackupResult {
+  success: boolean;
+  walletCount?: number;
+  error?: string;
+}
+
+export interface RestoreResult {
+  success: boolean;
+  restoredCount?: number;
+  skippedCount?: number;
+  error?: string;
+}
+
+@Injectable({ providedIn: 'root' })
 export class WalletBackupService {
 
   private readonly BACKUP_FILE_NAME = 'xterium_backup.json';
   private readonly DRIVE_FOLDER_NAME = 'Xterium';
   private readonly DRIVE_FILES_URL = 'https://www.googleapis.com/drive/v3/files';
   private readonly DRIVE_UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-  private readonly BOUNDARY = 'wallet_backup_boundary';
+  private readonly MULTIPART_BOUNDARY = 'wallet_backup_boundary';
+
+  private readonly GOOGLE_SCOPES = [
+    'profile',
+    'email',
+    'https://www.googleapis.com/auth/drive.file',
+  ];
 
   constructor(
-    private http: HttpClient,
-    private walletsService: WalletsService,
-    private encryptionService: EncryptionService
+    private readonly http: HttpClient,
+    private readonly walletsService: WalletsService,
+    private readonly encryptionService: EncryptionService,
   ) { }
 
-  async signInWithGoogle(): Promise<string | null> {
+  async backup(backupPin: string): Promise<BackupResult> {
+    if (!this.isAndroid()) {
+      return { success: false, error: 'Backup is only supported on Android.' };
+    }
+
     try {
-      const result = await SocialLogin.login({
-        provider: 'google',
-        options: {
-          scopes: [
-            'profile',
-            'email',
-            'https://www.googleapis.com/auth/drive.file',
-          ],
-        },
-      });
+      const wallets = await this.walletsService.getAllWallets();
+      if (!wallets.length) {
+        return { success: false, error: 'No wallets found — nothing to back up.' };
+      }
 
-      console.log('Full SocialLogin result:', JSON.stringify(result, null, 2));
-      return (result.result as any)?.accessToken?.token ?? null;
-    } catch (err) {
-      console.error('Google sign-in failed:', err);
-      return null;
+      const token = await this.getAccessToken();
+      if (!token) return { success: false, error: 'Google sign-in failed.' };
+
+      const encryptionKey = await this.encryptionService.hash(backupPin);
+      const encryptedJson = await this.encryptionService.encrypt(
+        JSON.stringify(wallets),
+        encryptionKey
+      );
+
+      const folderId = await this.getOrCreateDriveFolder(token);
+      const existingId = await this.findBackupFile(token, folderId);
+
+      if (existingId) {
+        await this.updateDriveFile(token, existingId, encryptedJson);
+      } else {
+        await this.createDriveFile(token, folderId, encryptedJson);
+      }
+
+      return { success: true, walletCount: wallets.length };
+
+    } catch (error) {
+      console.error('Backup failed:', error);
+
+      return {
+        success: false,
+        error: 'Backup failed. Please check your PIN and try again.'
+      };
     }
   }
 
-  async backup(backupPin: string): Promise<{ success: boolean; walletCount?: number; error?: string }> {
-    const wallets = await this.walletsService.getAllWallets();
-
-    if (!wallets.length) {
-      return { success: false, error: 'No wallets found — nothing to back up.' };
+  async restore(backupPin: string): Promise<RestoreResult> {
+    if (!this.isAndroid()) {
+      return { success: false, error: 'Restore is only supported on Android.' };
     }
 
-    const platform = Capacitor.getPlatform();
-    if (platform === 'android') return this.backupToGoogleDrive(wallets, backupPin);
-
-    return { success: false, error: 'Backup is only supported on Android and iOS.' };
-  }
-
-  async restore(backupPin: string): Promise<{ success: boolean; wallets?: Wallet[]; error?: string }> {
-    const platform = Capacitor.getPlatform();
-
-    if (platform === 'android') {
-      const wallets = await this.restoreFromGoogleDrive(backupPin);
-      if (!wallets) return { success: false, error: 'No backup file found or wrong PIN.' };
-      return { success: true, wallets };
-    }
-
-    return { success: false, error: 'Restore is only supported on Android and iOS.' };
-  }
-
-  private async backupToGoogleDrive(
-    wallets: Wallet[],
-    backupPin: string
-  ): Promise<{ success: boolean; fileId?: string; walletCount?: number; error?: string }> {
-    const encryptionKey = await this.encryptionService.hash(backupPin);
-
-    const token = await this.signInWithGoogle();
-    if (!token) return { success: false, error: 'Google sign-in did not return an access token.' };
-
-    const json = JSON.stringify(wallets, null, 2);
-    const encryptedJson = await this.encryptionService.encrypt(json, encryptionKey);
+    const token = await this.getAccessToken();
+    if (!token) return { success: false, error: 'Google sign-in failed.' };
 
     const folderId = await this.getOrCreateDriveFolder(token);
-    const existingId = await this.findFileInDrive(token, folderId);
+    const fileId = await this.findBackupFile(token, folderId);
+    if (!fileId) return { success: false, error: 'No backup file found in Google Drive.' };
 
-    const fileId = existingId
-      ? await this.updateDriveFile(token, existingId, encryptedJson)
-      : await this.createDriveFile(token, folderId, encryptedJson);
+    try {
+      const encryptionKey = await this.encryptionService.hash(backupPin);
+      const encryptedData = await this.downloadFile(token, fileId);
 
-    return { success: true, fileId, walletCount: wallets.length };
+      const decryptedJson = await this.encryptionService.decrypt(encryptedData, encryptionKey);
+
+      const wallets: Wallet[] = JSON.parse(decryptedJson);
+
+      const { restoredCount, skippedCount } = await this.saveWallets(wallets);
+
+      return { success: true, restoredCount, skippedCount };
+
+    } catch (error) {
+      console.error('Restore failed:', error);
+
+      return {
+        success: false,
+        error: 'Invalid backup PIN or corrupted backup file.'
+      };
+    }
   }
 
-  private async restoreFromGoogleDrive(backupPin: string): Promise<Wallet[] | null> {
-    const encryptionKey = await this.encryptionService.hash(backupPin);
+  private isAndroid(): boolean {
+    return Capacitor.getPlatform() === 'android';
+  }
 
-    const token = await this.signInWithGoogle();
-    if (!token) return null;
+  private async getAccessToken(): Promise<string | null> {
+    const result = await SocialLogin.login({
+      provider: 'google',
+      options: { scopes: this.GOOGLE_SCOPES },
+    });
+    return (result.result as any)?.accessToken?.token ?? null;
+  }
 
-    const folderId = await this.getOrCreateDriveFolder(token);
-    const fileId = await this.findFileInDrive(token, folderId);
-    if (!fileId) return null;
+  private async saveWallets(wallets: Wallet[]): Promise<{ restoredCount: number; skippedCount: number }> {
+    let restoredCount = 0;
+    let skippedCount = 0;
 
-    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
-    const encryptedData = await firstValueFrom(
-      this.http.get(
-        `${this.DRIVE_FILES_URL}/${fileId}?alt=media`,
-        { headers, responseType: 'text' }
-      )
+    for (const wallet of wallets) {
+      const exists = await this.walletsService.getWalletByPublicKey(wallet.public_key);
+      if (exists) {
+        skippedCount++;
+      } else {
+        await this.walletsService.create(wallet);
+        restoredCount++;
+      }
+    }
+
+    return { restoredCount, skippedCount };
+  }
+
+  private authHeaders(token: string): HttpHeaders {
+    return new HttpHeaders({ Authorization: `Bearer ${token}` });
+  }
+
+  private multipartHeaders(token: string): HttpHeaders {
+    return new HttpHeaders({
+      Authorization: `Bearer ${token}`,
+      'Content-Type': `multipart/related; boundary=${this.MULTIPART_BOUNDARY}`,
+    });
+  }
+
+  private multipartBody(metadata: object, content: string): string {
+    const b = this.MULTIPART_BOUNDARY;
+    return (
+      `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
+      `${JSON.stringify(metadata)}\r\n` +
+      `--${b}\r\nContent-Type: application/json\r\n\r\n` +
+      `${content}\r\n--${b}--`
     );
-
-    const decryptedJson = await this.encryptionService.decrypt(encryptedData, encryptionKey);
-    const wallets: Wallet[] = JSON.parse(decryptedJson);
-
-    return wallets;
   }
 
   private async getOrCreateDriveFolder(token: string): Promise<string> {
-    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
     const query = `name='${this.DRIVE_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
-
     const search: any = await firstValueFrom(
-      this.http.get(
-        `${this.DRIVE_FILES_URL}?q=${encodeURIComponent(query)}&fields=files(id)`,
-        { headers }
-      )
+      this.http.get(`${this.DRIVE_FILES_URL}?q=${encodeURIComponent(query)}&fields=files(id)`, {
+        headers: this.authHeaders(token),
+      })
     );
-    if (search.files?.length > 0) return search.files[0].id;
+
+    if (search.files?.length) return search.files[0].id;
 
     const created: any = await firstValueFrom(
       this.http.post(
         this.DRIVE_FILES_URL,
         { name: this.DRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' },
-        { headers }
+        { headers: this.authHeaders(token) }
       )
     );
     return created.id;
   }
 
-  private async findFileInDrive(token: string, folderId: string): Promise<string | null> {
-    const headers = new HttpHeaders({ Authorization: `Bearer ${token}` });
+  private async findBackupFile(token: string, folderId: string): Promise<string | null> {
     const query = `name='${this.BACKUP_FILE_NAME}' and '${folderId}' in parents and trashed=false`;
-
     const result: any = await firstValueFrom(
-      this.http.get(
-        `${this.DRIVE_FILES_URL}?q=${encodeURIComponent(query)}&fields=files(id)`,
-        { headers }
-      )
+      this.http.get(`${this.DRIVE_FILES_URL}?q=${encodeURIComponent(query)}&fields=files(id)`, {
+        headers: this.authHeaders(token),
+      })
     );
-    return result.files?.length > 0 ? result.files[0].id : null;
+    return result.files?.length ? result.files[0].id : null;
   }
 
-  private async createDriveFile(token: string, folderId: string, content: string): Promise<string> {
-    const result: any = await firstValueFrom(
+  private downloadFile(token: string, fileId: string): Promise<string> {
+    return firstValueFrom(
+      this.http.get(`${this.DRIVE_FILES_URL}/${fileId}?alt=media`, {
+        headers: this.authHeaders(token),
+        responseType: 'text',
+      })
+    );
+  }
+
+  private async createDriveFile(token: string, folderId: string, content: string): Promise<void> {
+    await firstValueFrom(
       this.http.post(
         this.DRIVE_UPLOAD_URL,
-        this.multipart({ name: this.BACKUP_FILE_NAME, parents: [folderId], mimeType: 'application/json' }, content),
-        {
-          headers: new HttpHeaders({
-            Authorization: `Bearer ${token}`,
-            'Content-Type': `multipart/related; boundary=${this.BOUNDARY}`,
-          }),
-        }
+        this.multipartBody({ name: this.BACKUP_FILE_NAME, parents: [folderId], mimeType: 'application/json' }, content),
+        { headers: this.multipartHeaders(token) }
       )
     );
-    return result.id;
   }
 
-  private async updateDriveFile(token: string, fileId: string, content: string): Promise<string> {
-    const result: any = await firstValueFrom(
+  private async updateDriveFile(token: string, fileId: string, content: string): Promise<void> {
+    await firstValueFrom(
       this.http.patch(
         `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`,
-        this.multipart({ mimeType: 'application/json' }, content),
-        {
-          headers: new HttpHeaders({
-            Authorization: `Bearer ${token}`,
-            'Content-Type': `multipart/related; boundary=${this.BOUNDARY}`,
-          }),
-        }
+        this.multipartBody({ mimeType: 'application/json' }, content),
+        { headers: this.multipartHeaders(token) }
       )
-    );
-    return result.id;
-  }
-
-  private multipart(metadata: object, content: string): string {
-    return (
-      `--${this.BOUNDARY}\r\n` +
-      `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
-      `${JSON.stringify(metadata)}\r\n` +
-      `--${this.BOUNDARY}\r\n` +
-      `Content-Type: application/json\r\n\r\n` +
-      `${content}\r\n` +
-      `--${this.BOUNDARY}--`
     );
   }
 }
