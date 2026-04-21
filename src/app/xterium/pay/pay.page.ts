@@ -203,7 +203,6 @@ export class PayPage implements OnInit {
           const bankDetails = await this.multipayxService.getBankCodeAndLogo(bankName);
           const bankCode = bankDetails.length > 0 ? bankDetails[0].bankCode : '';
           const bankIcon = bankDetails.length > 0 ? bankDetails[0].bankIcon : '';
-          console.log('Bank Icon URL:', bankIcon);
           const payDetails: PayDetails = {
             recipient_name: parsedEMVQR?.['59'] || '',
             account_number:

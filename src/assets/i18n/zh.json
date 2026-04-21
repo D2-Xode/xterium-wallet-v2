@@ -204,5 +204,15 @@
   "Please enter a new PIN to secure your wallets.": "请输入新的PIN以保护您的钱包。",
   "Create a password": "创建密码",
   "Confirm your password": "确认密码",
-  "Enter your password": "请输入密码"
+  "Enter your password": "请输入密码",
+  "Backup and Restore": "备份与恢复",
+  "Backup": "备份",
+  "Restore": "恢复",
+  "Set Your Backup PIN": "设置备份PIN码",
+  "Create a PIN to encrypt and protect your wallet backup.": "创建一个PIN码以加密并保护您的钱包备份。",
+  "Enter your PIN:": "请输入您的PIN码：",
+  "Backing up...": "正在备份...",
+  "Set PIN": "设置PIN码",
+  "Enter Your Backup PIN": "输入备份PIN码",
+  "Enter your backup PIN to restore your wallet.": "请输入备份PIN码以恢复您的钱包。"
 }

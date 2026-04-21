@@ -78,4 +78,39 @@
       }
     }
   }
+
+  .keep-alive-toggle-card {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    background: var(--ion-color-light, #f4f4f4);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 4px 0 12px;
+
+    .keep-alive-info {
+      flex: 1;
+      min-width: 0;
+
+      .keep-alive-title {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--ion-text-color);
+        margin: 0 0 3px;
+      }
+
+      .keep-alive-desc {
+        font-size: 12px;
+        color: var(--ion-color-medium);
+        line-height: 1.5;
+        margin: 0;
+      }
+    }
+
+    ion-toggle {
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+  }
 }

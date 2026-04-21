@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { ApiPromise } from '@polkadot/api';
-import { isAddress  } from '@polkadot/util-crypto';
+import { isAddress } from '@polkadot/util-crypto';
 
 import { Subscription } from 'rxjs';
 
@@ -27,6 +27,7 @@ import {
   // IonTitle,
   // IonToolbar,
   IonChip,
+  IonToggle,
   ToastController,
   AlertController
 } from '@ionic/angular/standalone';
@@ -79,6 +80,7 @@ import { TranslatePipe } from '@ngx-translate/core';
     // IonButtons,
     IonToast,
     IonChip,
+    IonToggle,
     // IonModal,
     // IonContent,
     // IonTitle,
@@ -130,6 +132,8 @@ export class SendComponent implements OnInit {
 
   selectedChain: Chain = new Chain();
 
+  isTransferKeepAlive: boolean = true;
+
   balancesObservableTimeout: any = null;
   balancesSubscription: Subscription = new Subscription();
   transferSubscription: Subscription = new Subscription();
@@ -148,6 +152,12 @@ export class SendComponent implements OnInit {
   onSelectedChain(chain: Chain) {
     this.selectedChain = chain;
     this.selectChainModal.dismiss();
+  }
+
+  async enableTransferKeepAlive(event: any): Promise<void> {
+    const isEnabled = event.detail.checked;
+
+    this.isTransferKeepAlive = isEnabled;
   }
 
   async pasteFromClipboard() {
@@ -193,8 +203,8 @@ export class SendComponent implements OnInit {
     if (this.currentWallet.chain.network === Network.Polkadot && this.currentWallet.chain.chain_id === 1000) service = this.assethubPolkadotService;
     if (this.currentWallet.chain.network === Network.Polkadot && this.currentWallet.chain.chain_id === 3417) service = this.xodePolkadotService;
     if (this.currentWallet.chain.network === Network.Polkadot && this.currentWallet.chain.chain_id === 2034) service = this.hydrationPolkadotService;
-    if (this.currentWallet.chain.network === Network.Paseo && this.currentWallet.chain.chain_id === 5109) service = this.xodePaseoService;
-    if (this.currentWallet.chain.network === Network.Rococo && this.currentWallet.chain.chain_id === 2000) service = this.polarisService;
+    if (this.currentWallet.chain.network === Network.Paseo && this.currentWallet.chain.chain_id === 5160) service = this.xodePaseoService;
+    if (this.currentWallet.chain.network === Network.Rococo && this.currentWallet.chain.chain_id === 1000) service = this.polarisService;
 
     if (!service) return;
 
@@ -378,7 +388,7 @@ export class SendComponent implements OnInit {
     if (this.currentWallet.chain.network === Network.Polkadot && this.currentWallet.chain.chain_id === 1000) service = this.assethubPolkadotService;
     if (this.currentWallet.chain.network === Network.Polkadot && this.currentWallet.chain.chain_id === 3417) service = this.xodePolkadotService;
     if (this.currentWallet.chain.network === Network.Polkadot && this.currentWallet.chain.chain_id === 2034) service = this.hydrationPolkadotService;
-    if (this.currentWallet.chain.network === Network.Paseo && this.currentWallet.chain.chain_id === 5109) service = this.xodePaseoService;
+    if (this.currentWallet.chain.network === Network.Paseo && this.currentWallet.chain.chain_id === 5160) service = this.xodePaseoService;
     if (this.currentWallet.chain.network === Network.Rococo && this.currentWallet.chain.chain_id === 2000) service = this.polarisService;
 
     if (!service) return;
@@ -396,31 +406,36 @@ export class SendComponent implements OnInit {
     const rawAmount = this.formattedAmountValue.replace(/,/g, '');
     const parseAmount = this.balancesService.parseBalance(Number(rawAmount), this.balance.token.decimals);
 
-    const transferTransaction = service.transfer(pjsApi, this.balance, this.recipientAddress, parseAmount);
+
+    const transferTransaction = service.transfer(pjsApi, this.balance, this.recipientAddress, parseAmount, this.isTransferKeepAlive);
 
     let existentialDeposit = 0;
     let estimatedFee = 0;
 
     if (this.balance.token.type === 'native') {
-      existentialDeposit = await service.getExistentialDepositOfNativeToken(pjsApi);
       estimatedFee = await service.getEstimatedFees(pjsApi, transferTransaction.toHex(), this.currentWalletPublicAddress, this.balance.token);
+
+      if (this.isTransferKeepAlive) {
+        existentialDeposit = await service.getExistentialDepositOfNativeToken(pjsApi);
+      }
     }
 
     const balanceAmountRequired = parseAmount + existentialDeposit + estimatedFee;
 
-    if (balanceAmountRequired > this.balance.quantity) {
-      const formattedBalanceRequired = this.balancesService.formatBalance(Number(balanceAmountRequired), this.currentWallet.chain.decimal);
-      const toast = await this.toastController.create({
-        message: `Insufficient balance. You need at least ${formattedBalanceRequired.toFixed(5)} ${this.currentWallet.chain.unit}`,
-        color: 'danger',
-        duration: 2500,
-        position: 'top',
-      });
+    if (this.isTransferKeepAlive) {
+      if (balanceAmountRequired > this.balance.quantity) {
+        const formattedBalanceRequired = this.balancesService.formatBalance(Number(balanceAmountRequired), this.currentWallet.chain.decimal);
+        const toast = await this.toastController.create({
+          message: `Insufficient balance. You need at least ${formattedBalanceRequired.toFixed(5)} ${this.currentWallet.chain.unit}`,
+          color: 'danger',
+          duration: 2500,
+          position: 'top',
+        });
 
-      await toast.present();
-      this.isProcessing = false;
-
-      return;
+        await toast.present();
+        this.isProcessing = false;
+        return;
+      }
     }
 
     const payload = JSON.stringify(await this.utilsService.createSignerPayload(pjsApi, transferTransaction, this.currentWalletPublicAddress));

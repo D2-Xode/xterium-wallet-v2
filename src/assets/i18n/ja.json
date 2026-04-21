@@ -204,5 +204,15 @@
   "Please enter a new PIN to secure your wallets.": "ウォレットを保護するために新しいPINを入力してください。",
   "Create a password": "パスワードを作成",
   "Confirm your password": "パスワードを確認",
-  "Enter your password": "パスワードを入力"
+  "Enter your password": "パスワードを入力",
+  "Backup and Restore": "バックアップと復元",
+  "Backup": "バックアップ",
+  "Restore": "復元",
+  "Set Your Backup PIN": "バックアップ用PINを設定",
+  "Create a PIN to encrypt and protect your wallet backup.": "ウォレットのバックアップを暗号化して保護するためのPINを作成してください。",
+  "Enter your PIN:": "PINを入力してください：",
+  "Backing up...": "バックアップ中...",
+  "Set PIN": "PINを設定",
+  "Enter Your Backup PIN": "バックアップPINを入力",
+  "Enter your backup PIN to restore your wallet.": "ウォレットを復元するにはバックアップPINを入力してください。"
 }

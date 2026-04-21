@@ -28,7 +28,7 @@ export abstract class PolkadotJsService {
   abstract getBalance(api: ApiPromise, token: Token, publicKey: string): Promise<Balance>;
   abstract watchBalance(api: ApiPromise, token: Token, publicKey: string): Observable<Balance>;
 
-  abstract transfer(api: ApiPromise, balance: Balance, destPublicKey: string, value: number): SubmittableExtrinsic<"promise", ISubmittableResult>;
+  abstract transfer(api: ApiPromise, balance: Balance, destPublicKey: string, value: number, isKeepAlive: boolean): SubmittableExtrinsic<"promise", ISubmittableResult>;
   abstract getEstimatedFees(api: ApiPromise, extrinsicHex: string, publicKey: string, token: Token | null): Promise<number>;
 
   sign(api: ApiPromise, payload: SignerPayloadJSON | SignerPayloadRaw, walletSigner: WalletSigner): SignerResult {
@@ -38,14 +38,10 @@ export abstract class PolkadotJsService {
         derivation_path = walletSigner.derivation_path;
       }
 
-      console.log('Signing payload with wallet signer:', walletSigner);
-
       const keyring = new Keyring({ type: 'sr25519' });
       const pair = keyring.addFromUri(walletSigner.mnemonic_phrase + derivation_path);
 
       if ('withSignedTransaction' in payload) {
-        console.log('Signing payload with signed transaction:', payload);
-
         const method = api.registry.createType('Call', payload.method);
         const extrinsic = api.registry.createType('Extrinsic', { method }, { version: payload.version });
 

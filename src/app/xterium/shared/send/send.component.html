@@ -73,6 +73,18 @@
       </ion-col>
     </ion-row>
     <ion-row>
+      <ion-col size="12">
+        <div class="keep-alive-toggle-card">
+          <div class="keep-alive-info">
+            <p class="keep-alive-title">{{ 'Transfer Keep-Alive' | translate }}</p>
+            <p class="keep-alive-desc">{{ 'Prevents the transfer if it would drop your balance below the minimum existential deposit, keeping your account active.' | translate }}</p>
+          </div>
+          <ion-toggle [checked]="isTransferKeepAlive" (ionChange)="enableTransferKeepAlive($event)">
+          </ion-toggle>
+        </div>
+      </ion-col>
+    </ion-row>
+    <ion-row>
       <ion-col size="12" class="enter-amount">
         <div class="ion-text-left label">
           <ion-label>{{ 'Amount:' | translate }}</ion-label>

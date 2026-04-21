@@ -195,13 +195,23 @@ export class HydrationPolkadotService extends PolkadotJsService {
     });
   }
 
-  transfer(api: ApiPromise, balance: Balance, destPublicKey: string, value: number): SubmittableExtrinsic<"promise", ISubmittableResult> {
+  // transfer(api: ApiPromise, balance: Balance, destPublicKey: string, value: number): SubmittableExtrinsic<"promise", ISubmittableResult> {
+  //   const bigIntAmount = BigInt(value);
+
+  //   const transferExtrinsic = api.tx['balances']['transferKeepAlive'](
+  //     destPublicKey,
+  //     bigIntAmount
+  //   );
+
+  //   return transferExtrinsic;
+  // }
+
+  transfer(api: ApiPromise, balance: Balance, destPublicKey: string, value: number, isKeepAlive: boolean = true): SubmittableExtrinsic<"promise", ISubmittableResult> {
     const bigIntAmount = BigInt(value);
 
-    const transferExtrinsic = api.tx['balances']['transferKeepAlive'](
-      destPublicKey,
-      bigIntAmount
-    );
+    const transferExtrinsic = isKeepAlive
+      ? api.tx['balances']['transferKeepAlive'](destPublicKey, bigIntAmount)
+      : api.tx['balances']['transferAllowDeath'](destPublicKey, bigIntAmount);
 
     return transferExtrinsic;
   }

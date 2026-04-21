@@ -342,28 +342,48 @@ export class AssethubPolkadotService extends PolkadotJsService {
     });
   }
 
-  transfer(api: ApiPromise, balance: Balance, destPublicKey: string, value: number): SubmittableExtrinsic<"promise", ISubmittableResult> {
+  // transfer(api: ApiPromise, balance: Balance, destPublicKey: string, value: number): SubmittableExtrinsic<"promise", ISubmittableResult> {
+  //   const bigIntAmount = BigInt(value);
+
+  //   if (balance.token.type === 'native') {
+  //     const transferExtrinsic = api.tx['balances']['transferKeepAlive'](
+  //       destPublicKey,
+  //       bigIntAmount
+  //     );
+
+  //     return transferExtrinsic;
+  //   }
+
+  //   const formattedAmount = api.createType(
+  //     "Compact<u128>",
+  //     bigIntAmount
+  //   );
+
+  //   const transferExtrinsic = api.tx['assets']['transferKeepAlive'](
+  //     Number(balance.token.reference_id),
+  //     destPublicKey,
+  //     formattedAmount,
+  //   );
+
+  //   return transferExtrinsic;
+  // }
+
+  transfer(api: ApiPromise, balance: Balance, destPublicKey: string, value: number, isKeepAlive: boolean = true): SubmittableExtrinsic<"promise", ISubmittableResult> {
     const bigIntAmount = BigInt(value);
 
     if (balance.token.type === 'native') {
-      const transferExtrinsic = api.tx['balances']['transferKeepAlive'](
-        destPublicKey,
-        bigIntAmount
-      );
+      const transferExtrinsic = isKeepAlive
+        ? api.tx['balances']['transferKeepAlive'](destPublicKey, bigIntAmount)
+        : api.tx['balances']['transferAllowDeath'](destPublicKey, bigIntAmount);
 
       return transferExtrinsic;
     }
 
-    const formattedAmount = api.createType(
-      "Compact<u128>",
-      bigIntAmount
-    );
+    const formattedAmount = api.createType("Compact<u128>", bigIntAmount);
 
-    const transferExtrinsic = api.tx['assets']['transferKeepAlive'](
-      Number(balance.token.reference_id),
-      destPublicKey,
-      formattedAmount,
-    );
+    const transferExtrinsic = isKeepAlive
+      ? api.tx['assets']['transferKeepAlive'](Number(balance.token.reference_id), destPublicKey, formattedAmount)
+      : api.tx['assets']['transfer'](Number(balance.token.reference_id), destPublicKey, formattedAmount);
 
     return transferExtrinsic;
   }

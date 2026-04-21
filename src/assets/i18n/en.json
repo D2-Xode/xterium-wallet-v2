@@ -204,5 +204,15 @@
   "Please enter a new PIN to secure your wallets.": "Please enter a new PIN to secure your wallets.",
   "Create a password": "Create a password",
   "Confirm your password": "Confirm your password",
-  "Enter your password": "Enter your password"
+  "Enter your password": "Enter your password",
+  "Backup and Restore": "Backup and Restore",
+  "Backup": "Backup",
+  "Restore": "Restore",
+  "Set Your Backup PIN": "Set Your Backup PIN",
+  "Create a PIN to encrypt and protect your wallet backup.": "Create a PIN to encrypt and protect your wallet backup.",
+  "Enter your PIN:": "Enter your PIN:",
+  "Backing up...": "Backing up...",
+  "Set PIN": "Set PIN",
+  "Enter Your Backup PIN": "Enter Your Backup PIN",
+  "Enter your backup PIN to restore your wallet.": "Enter your backup PIN to restore your wallet."
 }
