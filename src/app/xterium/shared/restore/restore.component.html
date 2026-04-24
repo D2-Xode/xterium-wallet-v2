@@ -4,8 +4,10 @@
       <ion-list>
         <ion-item lines="none" class="pin-item">
           <div class="pin-input-wrapper">
+            <ion-label position="stacked">{{ 'Enter your backup PIN:' | translate }}</ion-label>
             <ion-input-otp length="6" type="number" fill="solid" class="pin-input" id="otpInput"
-              (ionInput)="maskPin($event)" (ionInput)="onPinSetup($event)"></ion-input-otp>
+              [(ngModel)]="pinSetup" (ionInput)="maskPin($event)"
+              (ionInput)="onPinSetup($event)"></ion-input-otp>
           </div>
         </ion-item>
       </ion-list>
@@ -18,7 +20,7 @@
           @if (isProcessing) {
           <ion-spinner name="lines" slot="start"></ion-spinner>&nbsp;
           }
-          {{ isProcessing ? ('Restoring...' | translate) : ('Sign In' | translate) }}
+          {{ isProcessing ? ('Restoring...' | translate) : ('Restore from Google Drive' | translate) }}
         </ion-button>
       </div>
     </ion-col>

@@ -11,8 +11,9 @@ import {
   IonButton,
   IonIcon,
   IonInputOtp,
-  ToastController, 
-  IonSpinner 
+  IonLabel,
+  ToastController,
+  IonSpinner
 } from '@ionic/angular/standalone';
 
 import { TranslatePipe } from '@ngx-translate/core';
@@ -33,6 +34,7 @@ import { WalletBackupService } from 'src/app/api/wallet-backup/wallet-backup.ser
     IonButton,
     IonIcon,
     IonInputOtp,
+    IonLabel,
     TranslatePipe,
     IonSpinner,
   ],

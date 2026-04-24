@@ -119,8 +119,13 @@ export class AppComponent {
   initSocialLogin(): void {
     SocialLogin.initialize({
       google: {
-        webClientId: '286376865428-s6lkp8q0c6vk68i5pq17d0skrvl3mhkg.apps.googleusercontent.com',
+        // IMPORTANT: This must be a "Web application" OAuth client ID from GCP,
+        // NOT the Android client ID. The Android client (with SHA-1) must also
+        // exist in the same GCP project for Credential Manager to validate the app.
+        webClientId: '89792893899-qf9nv28hnpk24pi0v85ge5dk3ihv05f1.apps.googleusercontent.com',
       }
-    })
+    }).catch((err) => {
+      console.error('[SocialLogin] Initialization failed:', err);
+    });
   }
 }
