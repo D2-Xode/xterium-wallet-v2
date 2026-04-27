@@ -181,7 +181,7 @@ export class WalletBackupService {
    * immediately visible without needing to read Logcat.
    */
   private classifyError(error: unknown): string {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? error.message : JSON.stringify(error);
     const lower = msg.toLowerCase();
 
     // ── User-initiated cancellation ───────────────────────────────────────────
@@ -260,6 +260,17 @@ export class WalletBackupService {
       lower.includes('timeout')
     ) {
       return 'Network error. Please check your internet connection and try again.';
+    }
+
+    // ── Google Drive API not enabled in GCP ──────────────────────────────────
+    if (
+      lower.includes('service_disabled') ||
+      lower.includes('servicedisabled') ||
+      lower.includes('has not been used in project') ||
+      lower.includes('it is disabled') ||
+      (lower.includes('permission_denied') && lower.includes('drive'))
+    ) {
+      return 'Google Drive API is not enabled for this app. Please contact support.';
     }
 
     // ── Drive API auth errors (401 / 403) ─────────────────────────────────────
