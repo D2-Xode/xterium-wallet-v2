@@ -32,10 +32,6 @@ export class WalletBackupService {
   private readonly DRIVE_UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
   private readonly MULTIPART_BOUNDARY = 'wallet_backup_boundary';
 
-  /**
-   * Only the drive.file scope is needed here.
-   * The profile and email scopes are automatically added by the plugin.
-   */
   private readonly DRIVE_SCOPES = [
     'https://www.googleapis.com/auth/drive.file',
   ];
@@ -47,8 +43,12 @@ export class WalletBackupService {
   ) { }
 
   async backup(backupPin: string): Promise<BackupResult> {
-    if (!this.isAndroid()) {
-      return { success: false, error: 'Backup is only supported on Android.' };
+    if (this.isIOS()) {
+      return { success: false, error: 'The iOS backup feature is currently in development.' };
+    }
+
+    if (!this.isAndroid() && !this.isIOS()) {
+      return { success: false, error: 'Backup is only supported on Android and iOS.' };
     }
 
     let token: string | null = null;
@@ -91,8 +91,8 @@ export class WalletBackupService {
   }
 
   async restore(backupPin: string): Promise<RestoreResult> {
-    if (!this.isAndroid()) {
-      return { success: false, error: 'Restore is only supported on Android.' };
+    if (!this.isAndroid() && !this.isIOS()) {
+      return { success: false, error: 'Restore is only supported on Android and iOS.' };
     }
 
     let token: string | null = null;
@@ -136,17 +136,11 @@ export class WalletBackupService {
     return Capacitor.getPlatform() === 'android';
   }
 
-  /**
-   * Triggers Google Sign-In and returns the OAuth access token.
-   *
-   * We always sign out first to clear any cached authorization state on the device.
-   * Without this, Android may return a cached AuthorizationResult that was obtained
-   * for basic scopes only (profile/email), causing getAccessToken() to be null when
-   * drive.file is requested — triggering "Failed to get access token" from the plugin.
-   * A fresh sign-in always produces a new AuthorizationResult that includes drive.file.
-   */
+  private isIOS(): boolean {
+    return Capacitor.getPlatform() === 'ios';
+  }
+
   private async getAccessToken(): Promise<string | null> {
-    // Clear stale credential state so the authorization always includes the Drive scope.
     await this.signOut();
 
     const result = await SocialLogin.login({
@@ -160,31 +154,17 @@ export class WalletBackupService {
     return loginResult?.accessToken?.token ?? null;
   }
 
-  /**
-   * Signs out from Google after the operation to ensure the user
-   * must authenticate again for the next backup or restore.
-   */
   private async signOut(): Promise<void> {
     try {
       await SocialLogin.logout({ provider: 'google' });
     } catch {
-      // Sign-out is best-effort — do not fail the backup/restore operation
     }
   }
 
-  /**
-   * Classifies an error into a user-friendly message.
-   *
-   * Maps every known call.reject() string from the Android GoogleProvider to a
-   * meaningful message. The raw error detail is always appended so that
-   * configuration problems (SHA-1 mismatch, missing OAuth client, etc.) are
-   * immediately visible without needing to read Logcat.
-   */
   private classifyError(error: unknown): string {
     const msg = error instanceof Error ? error.message : JSON.stringify(error);
     const lower = msg.toLowerCase();
 
-    // ── User-initiated cancellation ───────────────────────────────────────────
     if (
       lower.includes('cancel') ||
       lower.includes('getcredentialcancelled') ||
@@ -193,16 +173,10 @@ export class WalletBackupService {
       return 'Google Sign-In was cancelled.';
     }
 
-    // ── "dismiss" alone is not a cancellation — fall through to sign-in errors ─
-
-    // ── No Google account on the device ──────────────────────────────────────
     if (lower.includes('nocredential') || lower.includes('no credential') || lower.includes('no viable credential')) {
       return 'No Google account found on this device. Please add a Google account in device Settings and try again.';
     }
 
-    // ── Developer/configuration error (Android error code 10) ─────────────────
-    // Happens when the SHA-1 fingerprint of the app is not registered in GCP,
-    // or the OAuth client package name does not match.
     if (
       lower.includes('developer_error') ||
       lower.includes('developer error') ||
@@ -214,7 +188,6 @@ export class WalletBackupService {
       return `Google Sign-In configuration error — the app signing certificate (SHA-1) may not be registered in Google Cloud Console. Detail: ${msg}`;
     }
 
-    // ── Credential Manager provider not set up / unsupported ─────────────────
     if (
       lower.includes('provider') ||
       lower.includes('unsupported') ||
@@ -223,10 +196,6 @@ export class WalletBackupService {
       return `Google Sign-In is not available on this device. Detail: ${msg}`;
     }
 
-    // ── Access token / Drive authorization failures ───────────────────────────
-    // Covers: "Failed to get access token", "Error retrieving access token: ...",
-    //         "getAccessToken() is null", "Failed to authorize",
-    //         "Cannot get getAuthorizationResultFromIntent"
     if (
       lower.includes('access token') ||
       lower.includes('getaccesstoken') ||
@@ -236,9 +205,6 @@ export class WalletBackupService {
       return `Google Drive authorization failed. Please try again. If the problem persists, revoke the app's Google Drive access in your Google account settings and retry. Detail: ${msg}`;
     }
 
-    // ── Credential retrieval / general sign-in failure ────────────────────────
-    // Covers: "Google Sign-In failed: <anything>",
-    //         "Failed to get Google credentials", "Error handling sign-in result"
     if (
       lower.includes('sign-in failed') ||
       lower.includes('google sign-in') ||
@@ -248,12 +214,10 @@ export class WalletBackupService {
       return `Google Sign-In failed. Detail: ${msg}`;
     }
 
-    // ── Wrong PIN → JSON.parse throws SyntaxError on decrypted garbage ────────
     if (error instanceof SyntaxError || lower.includes('json') || lower.includes('unexpected token')) {
       return 'Invalid backup PIN or corrupted backup file. Please check your PIN and try again.';
     }
 
-    // ── Network / HTTP errors from Drive REST API ─────────────────────────────
     if (
       lower.includes('network') ||
       lower.includes('failed to fetch') ||
@@ -262,7 +226,6 @@ export class WalletBackupService {
       return 'Network error. Please check your internet connection and try again.';
     }
 
-    // ── Google Drive API not enabled in GCP ──────────────────────────────────
     if (
       lower.includes('service_disabled') ||
       lower.includes('servicedisabled') ||
@@ -273,7 +236,6 @@ export class WalletBackupService {
       return 'Google Drive API is not enabled for this app. Please contact support.';
     }
 
-    // ── Drive API auth errors (401 / 403) ─────────────────────────────────────
     if (
       lower.includes('401') ||
       lower.includes('403') ||
