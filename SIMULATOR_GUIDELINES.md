@@ -23,7 +23,7 @@ This guide helps you build and run your Ionic app on Android and iOS simulators 
 
 ### 2. Copy and Sync Capacitor Files
 
-    npx cap copy && npx cap sync
+    npx cap copy android && npx cap sync android
 
 ### 3. Open Android Project in Android Studio
 
