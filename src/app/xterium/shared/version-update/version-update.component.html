@@ -1,0 +1,27 @@
+<div class="modal-wrapper">
+  <div class="icon-container">
+    <ion-icon name="cloud-download-outline"></ion-icon>
+  </div>
+
+  <h2 class="title">Update available</h2>
+
+  <ion-badge color="tertiary">version {{ availableVersion }}</ion-badge>
+
+  <p class="description">
+    A new version is ready. Update now to get the latest features and
+    improvements.
+  </p>
+
+  <ion-button expand="block" class="update-btn" (click)="onUpdateNow()">
+    Update now
+  </ion-button>
+
+  <ion-button
+    expand="block"
+    fill="clear"
+    class="later-btn"
+    (click)="onMaybeLater()"
+  >
+    Maybe later
+  </ion-button>
+</div>

@@ -137,4 +137,13 @@ ion-modal.select-network-metadata-modal {
   --height: auto;
 }
 
+ion-modal.update-version-modal {
+  --height: auto;
+
+  ion-list {
+    background: transparent;
+    padding-bottom: 20px;
+  }
+}
+
 

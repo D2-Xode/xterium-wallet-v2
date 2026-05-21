@@ -716,6 +716,8 @@ export class SettingsComponent implements OnInit {
     }
 
     this.appVersion = await this.appVersionService.getAppVersion();
+
+    console.log('Version:', this.appVersion);
   }
 
   ngOnInit() {

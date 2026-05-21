@@ -157,7 +157,8 @@
                     <div class="modal-content-container">
                       <div class="ion-text-center ion-padding-start ion-padding-end ion-padding-bottom">
                         <h1 style="font-weight: bold;">{{ 'Recovery Phrase' | translate }}</h1>
-                        <span style="font-size: 15px;">{{ 'Write down this mnemonic phrase and store it securely. It will be required to restore your wallet.' | translate }}</span>
+                        <span style="font-size: 15px;">{{ 'Write down this mnemonic phrase and store it securely. It
+                          will be required to restore your wallet.' | translate }}</span>
                       </div>
 
                       <app-new-wallet [selectedChain]="selectedChain"
@@ -182,7 +183,8 @@
                     <div class="modal-content-container">
                       <div class="ion-text-center ion-padding-start ion-padding-end ion-padding-bottom">
                         <h1 style="font-weight: bold;">{{ 'Import Seed Phrase' | translate }}</h1>
-                        <span style="font-size: 15px;">{{ 'Restore an existing wallet with your 12-word recovery phrase.' | translate }}</span>
+                        <span style="font-size: 15px;">{{ 'Restore an existing wallet with your 12-word recovery
+                          phrase.' | translate }}</span>
                       </div>
 
                       <app-import-seed-phrase [selectedChain]="selectedChain"
@@ -308,6 +310,24 @@
           <app-settings></app-settings>
         </div>
       </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <ion-modal #updateVersionModal class="update-version-modal" [initialBreakpoint]="0.98" [breakpoints]="[0, 0.98]"
+    [expandToScroll]="false">
+    <ng-template>
+      <div class="modal-content-container">
+        <ion-grid>
+          <ion-row>
+            <ion-col size="12">
+              <ion-list>
+                <app-version-update [currentVersion]="currentVersion" [availableVersion]="availableVersion" (dismiss)="updateVersionModal.dismiss()">
+                </app-version-update>
+              </ion-list>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </div>
     </ng-template>
   </ion-modal>
 </div>

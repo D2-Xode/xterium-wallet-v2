@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -49,6 +49,7 @@ import { TokensComponent } from "src/app/xterium/shared/tokens/tokens.component"
 import { SendComponent } from "src/app/xterium/shared/send/send.component"
 import { NotificationsComponent } from './shared/notifications/notifications.component';
 import { SettingsComponent } from './shared/settings/settings.component';
+import { VersionUpdateComponent } from './shared/version-update/version-update.component';
 
 import { Network } from 'src/models/network.model';
 import { Chain } from 'src/models/chain.model';
@@ -62,9 +63,12 @@ import { AuthService } from 'src/app/api/auth/auth.service';
 import { ChainsService } from '../api/chains/chains.service';
 import { LocalNotificationsService } from '../api/local-notifications/local-notifications.service';
 import { SettingsService } from '../api/settings/settings.service';
+import { AppVersionService } from '../api/app-version/app-version.service';
 
 import { TranslatePipe } from '@ngx-translate/core';
 import { Balance } from 'src/models/balance.model';
+
+import { AppUpdateAvailability } from '@capawesome/capacitor-app-update';
 
 @Component({
   selector: 'app-xterium',
@@ -102,10 +106,11 @@ import { Balance } from 'src/models/balance.model';
     SendComponent,
     NotificationsComponent,
     SettingsComponent,
+    VersionUpdateComponent,
     TranslatePipe,
   ]
 })
-export class XteriumPage implements OnInit {
+export class XteriumPage implements OnInit, AfterViewInit {
   @ViewChild('myWalletsModal', { read: IonModal }) myWalletsModal!: IonModal;
   @ViewChild('createWalletModal', { read: IonModal }) createWalletModal!: IonModal;
   @ViewChild('selectChainModal', { read: IonModal }) selectChainModal!: IonModal;
@@ -118,6 +123,8 @@ export class XteriumPage implements OnInit {
   @ViewChild('balancesSelectTokenModal', { read: IonModal }) balancesSelectTokenModal!: IonModal;
   @ViewChild('balancesSendModal', { read: IonModal }) balancesSendModal!: IonModal;
 
+  @ViewChild('updateVersionModal', { read: IonModal }) updateVersionModal!: IonModal;
+
   constructor(
     private router: Router,
     private utilsService: UtilsService,
@@ -126,6 +133,7 @@ export class XteriumPage implements OnInit {
     private chainsService: ChainsService,
     private localNotificationsService: LocalNotificationsService,
     private settingsService: SettingsService,
+    private appVersionService: AppVersionService,
   ) {
     addIcons({ notificationsOutline, settingsOutline, briefcase, send, timer, addCircle, close, chevronDownOutline, swapHorizontal, qrCode, compass, });
 
@@ -146,6 +154,10 @@ export class XteriumPage implements OnInit {
   selectedBalance: Balance = new Balance();
 
   refreshCounter: number = 0;
+
+  isUpdateAvailable: boolean = false;
+  currentVersion: string = '';
+  availableVersion: string = '';
 
   async encodePublicAddressByChainFormat(publicKey: string, chain: Chain): Promise<string> {
     const publicKeyUint8 = new Uint8Array(
@@ -313,6 +325,23 @@ export class XteriumPage implements OnInit {
     await this.settingsService.set(newSettings);
   }
 
+  async openVersionUpdateModal() {
+    this.updateVersionModal.present();
+  }
+
+  async checkForAppUpdate(): Promise<void> {
+    try {
+      const result = await this.appVersionService.getAppUpdateInfo();
+      if (result && result.updateAvailability === AppUpdateAvailability.UPDATE_AVAILABLE) {
+        this.currentVersion = result.currentVersionName ?? '';
+        this.availableVersion = result.availableVersionName ?? '';
+        this.openVersionUpdateModal();
+      }
+    } catch (e) {
+      console.warn('App update check failed:', e);
+    }
+  }
+
   ngOnInit() {
     this.initSettings();
 
@@ -332,5 +361,11 @@ export class XteriumPage implements OnInit {
         this.getCurrentWallet();
       }, 500);
     });
+  }
+
+  ngAfterViewInit() {
+    setTimeout(() => {
+      this.checkForAppUpdate();
+    }, 1000);
   }
 }
