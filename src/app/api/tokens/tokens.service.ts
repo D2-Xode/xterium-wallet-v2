@@ -19,6 +19,7 @@ export class TokensService {
     MPC: 'assets/images/tokens/mpc.png',
     USDT: 'assets/images/tokens/usdt.png',
     DON: 'assets/images/tokens/don.png',
+    HUG: 'assets/images/tokens/hug.png',
     DEFAULT: 'assets/images/tokens/default.png',
   }
 
