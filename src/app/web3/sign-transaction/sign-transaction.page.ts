@@ -44,8 +44,7 @@ import {
   arrowDownOutline,
   globeOutline,
   flame,
-  close, checkmarkCircleOutline
-} from 'ionicons/icons';
+  close, checkmarkCircleOutline, warningOutline, alertCircleOutline } from 'ionicons/icons';
 
 import { Network } from 'src/models/network.model';
 import { Chain } from 'src/models/chain.model';
@@ -145,7 +144,7 @@ export class SignTransactionPage implements OnInit {
     private toastController: ToastController,
     private loadingController: LoadingController,
   ) {
-    addIcons({ arrowUpOutline, globeOutline, flame, close, checkmarkCircleOutline, cube, cubeOutline, arrowDownOutline });
+    addIcons({warningOutline,alertCircleOutline,arrowUpOutline,globeOutline,flame,close,checkmarkCircleOutline,cube,cubeOutline,arrowDownOutline});
   }
 
   private pjsApiMap: Map<number, ApiPromise> = new Map();
@@ -178,6 +177,8 @@ export class SignTransactionPage implements OnInit {
   postSignedHex: string = '';
   postCallbackUrl: string | null = null;
 
+  isWalletNotFound: boolean = false;
+
   async encodePublicAddressByChainFormat(publicKey: string, chain: Chain): Promise<string> {
     const publicKeyUint8 = new Uint8Array(
       publicKey.split(',').map(byte => Number(byte.trim()))
@@ -193,6 +194,27 @@ export class SignTransactionPage implements OnInit {
       this.currentWallet = currentWallet;
       this.currentWalletPublicAddress = await this.encodePublicAddressByChainFormat(this.currentWallet.public_key, this.currentWallet.chain)
     }
+  }
+
+  async checkWalletExists(address: string, genesisHash: HexString): Promise<boolean> {
+    const decodedAddress = decodeURIComponent(address);
+    const selectedPublicKey = decodeAddress(decodedAddress);
+
+    const allWallets = await this.walletsService.getAllWallets();
+    if (allWallets.length === 0) return false;
+
+    const walletsByChain = allWallets.filter(wallet => wallet.chain.genesis_hash === genesisHash);
+    if (walletsByChain.length === 0) return false;
+
+    const index = walletsByChain.findIndex(wallet => {
+      const walletPublicKey = new Uint8Array(
+        wallet.public_key.split(',').map(byte => Number(byte.trim()))
+      );
+      return walletPublicKey.length === selectedPublicKey.length &&
+        walletPublicKey.every((byte, i) => byte === selectedPublicKey[i]);
+    });
+
+    return index >= 0;
   }
 
   async replaceCurrentWallet(address: string, genesisHash: HexString): Promise<void> {
@@ -242,6 +264,13 @@ export class SignTransactionPage implements OnInit {
     this.isBiometricAvailable = availability.available;
   }
 
+  async handleWalletNotFound(): Promise<never> {
+    this.isWalletNotFound = true;
+    this.isLoadingFee = false;
+   
+    throw new Error('Wallet not found.');
+  }
+
   async initTransaction(): Promise<void> {
     await this.getCurrentWallet();
 
@@ -285,6 +314,8 @@ export class SignTransactionPage implements OnInit {
           this.paramsPayload = JSON.parse(decodeURIComponent(params['payload']));
           const payloadJSON = this.paramsPayload as SignerPayloadJSON;
 
+          const wallet = await this.checkWalletExists(payloadJSON.address, payloadJSON.genesisHash);
+          if (!wallet) await this.handleWalletNotFound();
           await this.replaceCurrentWallet(payloadJSON.address, payloadJSON.genesisHash);
 
           if (!payloadJSON.method) {
@@ -307,6 +338,8 @@ export class SignTransactionPage implements OnInit {
           const payloadRaw = this.paramsPayload as SignerPayloadRaw;
 
           const genesisHash = pjsApi.genesisHash.toHex() as `0x${string}`;
+          const wallet = await this.checkWalletExists(payloadRaw.address, genesisHash);
+          if (!wallet) await this.handleWalletNotFound();
           await this.replaceCurrentWallet(payloadRaw.address, genesisHash);
 
           let decoded = new Bytes(pjsApi.registry, payloadRaw.data).toUtf8();
@@ -324,6 +357,8 @@ export class SignTransactionPage implements OnInit {
           this.paramsPayload = JSON.parse(decodeURIComponent(params['payload']));
           const payloadTransactionHex = this.paramsPayload as SignerPayloadTransactionHex;
 
+          const wallet = await this.checkWalletExists(payloadTransactionHex.address, payloadTransactionHex.genesis_hash);
+          if (!wallet) await this.handleWalletNotFound();
           await this.replaceCurrentWallet(payloadTransactionHex.address, payloadTransactionHex.genesis_hash);
 
           const convertedHex = this.utilsService.normalizeToExtrinsicHex(payloadTransactionHex.transaction_hex, pjsApi);

@@ -18,30 +18,38 @@
       <ion-row>
         <ion-col size="12">
           <div class="ion-text-center">
-            @if (paramsSigningType !== null && (paramsSigningType === 'signPayload' || paramsSigningType ===
-            'signTransactionHex'))
-            {
-            <ion-chip [color]="'success'">
-              <ion-icon [name]="'cube'"></ion-icon>
-              @if (isLoadingFee) {
-              <ion-spinner name="lines"></ion-spinner>
+            @if (!isWalletNotFound) {
+              @if (paramsSigningType !== null && (paramsSigningType === 'signPayload' || paramsSigningType === 'signTransactionHex')) {
+              <ion-chip [color]="'success'">
+                <ion-icon [name]="'cube'"></ion-icon>
+                @if (isLoadingFee) {
+                <ion-spinner name="lines"></ion-spinner>
+                }
+                @else {
+                <ion-label>{{ extrinsic }}</ion-label>
+                }
+              </ion-chip>
               }
-              @else {
-              <ion-label>{{ extrinsic }}</ion-label>
-              }
-            </ion-chip>
-            }
 
-            @if (paramsSigningType !== null &&paramsSigningType === 'signRaw') {
-            <ion-chip [color]="'warning'">
-              <ion-icon [name]="'cube'"></ion-icon>
-              @if (isLoadingFee) {
-              <ion-spinner name="lines"></ion-spinner>
+              @if (paramsSigningType !== null && paramsSigningType === 'signRaw') {
+              <ion-chip [color]="'warning'">
+                <ion-icon [name]="'cube'"></ion-icon>
+                @if (isLoadingFee) {
+                <ion-spinner name="lines"></ion-spinner>
+                }
+                @else {
+                <ion-label> {{ 'Raw Transaction' | translate }} </ion-label>
+                }
+              </ion-chip>
               }
-              @else {
-              <ion-label> {{ 'Raw Transaction' | translate }} </ion-label>
-              }
-            </ion-chip>
+            } @else {
+            <div class="no-wallet-inline">
+              <ion-icon name="warning-outline" color="danger" style="font-size: 32px;"></ion-icon>
+              <h2 style="color: var(--ion-color-danger); margin-top: 8px;">{{ 'Wallet Not Found' | translate }}</h2>
+              <p style="font-size: 14px; color: var(--ion-color-medium);">
+                {{ 'The requested wallet does not exist in Xterium. Please import or create the wallet first.' | translate }}
+              </p>
+            </div>
             }
           </div>
         </ion-col>
@@ -49,6 +57,7 @@
       <ion-row>
         <ion-col size="12">
           <div class="wallet-details ion-margin-top">
+            @if (!isWalletNotFound) {
             <h2 style="margin-left: 5px; margin-bottom: 5px;">{{ 'Send from Account:' | translate }}</h2>
             <ion-list>
               <ion-item detail="false" lines="none">
@@ -61,13 +70,27 @@
                 </ion-label>
               </ion-item>
             </ion-list>
+            }
           </div>
         </ion-col>
       </ion-row>
       <ion-row>
         <ion-col size="12">
           <div class="payload-container">
-            @if (paramsSigningType === 'signPayload' || paramsSigningType === 'signTransactionHex') {
+            @if (isWalletNotFound) {
+            <ion-card class="transaction-card">
+              <ion-list>
+                <ion-item lines="none">
+                  <ion-label>
+                    <h2 style="color: var(--ion-color-danger); text-align: center;">
+                      {{ 'Transaction Blocked' | translate }}
+                    </h2>
+                  </ion-label>
+                </ion-item>
+              </ion-list>
+            </ion-card>
+            }
+            @if (!isWalletNotFound && (paramsSigningType === 'signPayload' || paramsSigningType === 'signTransactionHex')) {
             <ion-card class="transaction-card">
               <ion-list>
                 <ion-item lines="none">
@@ -111,7 +134,7 @@
             </ion-card>
             }
 
-            @if (paramsSigningType === 'signRaw') {
+            @if (!isWalletNotFound && paramsSigningType === 'signRaw') {
             <div class="raw-data-content">
               @if (isLoadingFee) {
               <div class="fee-loading">
@@ -141,7 +164,7 @@
         <ion-col size="6">
           <div class="primary-button-wrapper">
             <ion-button expand="block" size="default" class="ion-margin-bottom" (click)="signTransactions()"
-              [disabled]="isLoadingFee">
+              [disabled]="isLoadingFee || isWalletNotFound">
               {{ 'Sign' | translate }}
             </ion-button>
           </div>
