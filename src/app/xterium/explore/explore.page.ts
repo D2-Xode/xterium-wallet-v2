@@ -5,17 +5,23 @@ import { FormsModule } from '@angular/forms';
 
 import {
   IonContent,
-  IonCard,
-  IonCardHeader,
-  IonCardTitle,
-  IonCardSubtitle,
-  IonCardContent,
-  IonGrid,
-  IonRow,
-  IonCol,
-} from '@ionic/angular/standalone';
+  IonIcon, 
+  IonSpinner
+ } from '@ionic/angular/standalone';
+
+import { addIcons } from 'ionicons';
+import { 
+  searchOutline, 
+  addOutline 
+} from 'ionicons/icons';
+
+import { Browser } from '@capacitor/browser'; 
+
+import { App } from 'src/models/app.model';
+import { XteriumApiService } from 'src/app/api/xterium-api/xterium-api.service';
 
 import { TranslatePipe } from '@ngx-translate/core';
+
 
 @Component({
   selector: 'app-explore',
@@ -27,28 +33,86 @@ import { TranslatePipe } from '@ngx-translate/core';
     CommonModule,
     FormsModule,
     IonContent,
-    IonGrid,
-    IonRow,
-    IonCol,
-    IonCard,
-    IonCardHeader,
-    IonCardTitle,
-    IonCardSubtitle,
-    IonCardContent,
+    IonIcon,
+    IonSpinner,
     TranslatePipe,
   ],
 })
 export class ExplorePage implements OnInit {
+  apps: App[] = [];
+  featuredApps: App[] = [];
+  trendingApps: App[] = [];
+  isLoading = false;
+  error: string | null = null;
+  trendingOpen = true;
 
-  constructor() { }
+  searchUrl = '';
 
-  goToStaking() {
-    window.open('https://staking.xode.net/', '_blank');
+  constructor(
+    private xteriumApiService: XteriumApiService
+  ) {
+    addIcons({
+      searchOutline,
+      addOutline
+    });
   }
 
-  goToGovernance() {
-    window.open('https://governance.xode.net/', '_blank');
+  loadApps() {
+    this.isLoading = true;
+    this.error = null;
+
+    this.xteriumApiService.getApps().subscribe({
+      next: (data) => {
+        this.apps = data;
+        this.featuredApps = data.slice(0, 3);
+        this.trendingApps = data.slice(3);
+        this.isLoading = false;
+      },
+      error: (err) => {
+        console.error('Failed to load apps:', err);
+        this.error = 'Failed to load apps. Please try again.';
+        this.isLoading = false;
+      },
+    });
   }
 
-  ngOnInit() { }
+  async goToApp(url: string) {
+    const formattedUrl = url.startsWith('http') ? url : `https://${url}`;
+
+    await Browser.open({
+      url: formattedUrl,
+      presentationStyle: 'fullscreen',
+      toolbarColor: '#0a0a0a',
+    });
+  }
+
+  async onSearchSubmit() {
+    const raw = this.searchUrl.trim();
+    if (!raw) return;
+
+    const isUrl = raw.includes('.') && !raw.includes(' ');
+    const url = isUrl
+      ? (raw.startsWith('http') ? raw : `https://${raw}`)
+      : `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
+
+    await Browser.open({
+      url,
+      presentationStyle: 'fullscreen',
+      toolbarColor: '#0a0a0a',
+    });
+
+    this.searchUrl = '';
+  }
+
+  getInitial(name: string): string {
+    return name?.charAt(0).toUpperCase() ?? '?';
+  }
+
+  toggleTrending() {
+    this.trendingOpen = !this.trendingOpen;
+  }
+
+  ngOnInit() {
+    this.loadApps();
+  }
 }

@@ -1,46 +1,70 @@
 <ion-content [fullscreen]="true" class="explore-content">
-  <div class="ion-padding-horizontal">
-    <ion-grid>
-      <ion-row>
-        <ion-col size="12">
-          <div class="ion-text-center ion-padding-start ion-padding-end ion-padding-bottom xterium-header">
-            <h1>{{ 'Explore' | translate }}</h1>
-            <span>
-              {{ 'Discover amazing services and opportunities within the Xterium ecosystem.' | translate }}
-            </span>
-          </div>
-        </ion-col>
-      </ion-row>
-      <ion-row>
-        <ion-col size="12" size-md="6">
-          <ion-card class="explore-card" (click)="goToStaking()">
-            <div class="explore-card-image">
-              <img src="./../../../assets/images/backgrounds/explore-staking.png" />
-            </div>
-            <ion-card-header>
-              <ion-card-title>{{ 'Xode Staking' | translate }}</ion-card-title>
-              <ion-card-subtitle>{{ 'Web3 Infrastructure' | translate }}</ion-card-subtitle>
-            </ion-card-header>
-            <ion-card-content>
-              {{ 'Stake your assets on Xode\'s secure platform and earn competitive rewards. Our staking service provides reliable infrastructure with high uptime and optimal returns for your investments.' | translate }}
-            </ion-card-content>
-          </ion-card>
-        </ion-col>
-        <ion-col size="12" size-md="6">
-          <ion-card class="explore-card" (click)="goToGovernance()">
-            <div class="explore-card-image">
-              <img src="./../../../assets/images/backgrounds/explore-governance.png" />
-            </div>
-            <ion-card-header>
-              <ion-card-title>{{ 'Xode Governance' | translate }}</ion-card-title>
-              <ion-card-subtitle>{{ 'Decentralized Decision Making' | translate }}</ion-card-subtitle>
-            </ion-card-header>
-            <ion-card-content>
-              {{ 'Participate in the governance of Xode by staking your assets and voting on key decisions. Our platform empowers users to have a say in the future of the ecosystem.' | translate }}
-            </ion-card-content>
-          </ion-card>
-        </ion-col>
-      </ion-row>
-    </ion-grid>
+  <div class="search-wrapper">
+    <div class="search-bar">
+      <ion-icon name="search-outline" class="search-icon"></ion-icon>
+      <input
+        class="search-input"
+        type="url"
+        placeholder="Search Apps, Bookmarks, URL"
+        [(ngModel)]="searchUrl"
+        (keyup.enter)="onSearchSubmit()"
+      />
+    </div>
+    <div class="search-add-btn" (click)="onSearchSubmit()">
+      <ion-icon name="add-outline"></ion-icon>
+    </div>
   </div>
+
+  @if (isLoading) {
+  <div class="loading-container">
+    <ion-spinner name="crescent"></ion-spinner>
+  </div>
+  } @if (error && !isLoading) {
+  <div class="error-container">
+    <p class="error-message">{{ error }}</p>
+  </div>
+  } @if (!isLoading && !error) {
+
+  <div class="featured-scroll">
+    @for (app of featuredApps; track app._id) {
+    <div class="featured-card" (click)="goToApp(app.url)">
+      <div class="featured-icon">
+        @if (app.image) {
+        <img [src]="app.image" [alt]="app.name" />
+        } @else {
+        <span>{{ getInitial(app.name) }}</span>
+        }
+      </div>
+      <p class="featured-name">{{ app.name }}</p>
+      <p class="featured-category">{{ app.description }}</p>
+    </div>
+    }
+  </div>
+
+  <div class="trending-header" (click)="toggleTrending()">
+    <span>{{ 'Trending' | translate }}</span>
+    <ion-icon
+      [name]="trendingOpen ? 'chevron-up-outline' : 'chevron-down-outline'"
+    ></ion-icon>
+  </div>
+
+  @if (trendingOpen) {
+  <div class="trending-list">
+    @for (app of trendingApps; track app._id) {
+    <div class="trending-item" (click)="goToApp(app.url)">
+      <div class="trending-icon">
+        @if (app.image) {
+        <img [src]="app.image" [alt]="app.name" />
+        } @else {
+        <span>{{ getInitial(app.name) }}</span>
+        }
+      </div>
+      <div class="trending-info">
+        <p class="trending-name">{{ app.name }}</p>
+        <p class="trending-category">{{ app.description }}</p>
+      </div>
+    </div>
+    }
+  </div>
+  } }
 </ion-content>
