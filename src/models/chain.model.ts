@@ -12,8 +12,8 @@ export enum ScannerType {
 
 export class Scanner {
   type: ScannerType = ScannerType.Subscan;
-  transfers_url?: string = "https://subsquid-v2.xode.net/graphql";
-  extrinsics_url?: string = "https://subsquid-v2.xode.net/graphql";
+  transfers_url?: string = "https://blockscanner.xode.net/transfers";
+  extrinsics_url?: string = "https://blockscanner.xode.net/extrinsics";
 }
 
 export class Chain {
@@ -30,7 +30,7 @@ export class Chain {
   image: string = "src/assets/images/networks/xode.png";
   scanner?: Scanner = {
     type: ScannerType.Subsquid,
-    transfers_url: "https://subsquid-v2.xode.net/graphql",
-    extrinsics_url: "https://subsquid-v2.xode.net/graphql"
+    transfers_url: "https://blockscanner.xode.net/transfers",
+    extrinsics_url: "https://blockscanner.xode.net/extrinsics"
   }
 }

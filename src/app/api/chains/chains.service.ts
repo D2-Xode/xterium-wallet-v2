@@ -69,8 +69,8 @@ export class ChainsService {
       image: "xode.png",
       scanner: {
         type: ScannerType.Subsquid,
-        transfers_url: "https://polkadot-indexer.staginglab.info",
-        extrinsics_url: "https://polkadot-indexer.staginglab.info"
+        transfers_url: "https://indexer.xode.net",
+        extrinsics_url: "https://indexer.xode.net"
       }
     },
     {
