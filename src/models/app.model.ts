@@ -4,4 +4,5 @@ export class App {
   description!: string;
   image!: string | null;
   url!: string;
+  open_count!: number;
 }

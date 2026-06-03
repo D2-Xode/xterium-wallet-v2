@@ -18,4 +18,7 @@ export class XteriumApiService {
     return this.http.get<App[]>(`${this.apiUrl}/apps`);
   }
   
+  incrementAppOpenCount(appId: string): Observable<App> {
+    return this.http.patch<App>(`${this.apiUrl}/apps/${appId}/open`, {});
+  }
 }

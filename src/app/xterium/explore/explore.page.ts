@@ -1,26 +1,51 @@
-import { Component, OnInit } from '@angular/core';
+import { 
+  ChangeDetectorRef, 
+  Component, 
+  ElementRef, 
+  OnInit, 
+  ViewChild 
+} from '@angular/core';
+
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import {
   IonContent,
-  IonIcon, 
-  IonSpinner
- } from '@ionic/angular/standalone';
+  IonIcon,
+  IonSpinner,
+  IonInput,
+  IonButton,
+  IonModal,
+  IonCol,
+  IonRow,
+  IonGrid,
+  IonItem,
+  IonList
+} from '@ionic/angular/standalone';
 
 import { addIcons } from 'ionicons';
-import { 
-  searchOutline, 
-  addOutline 
+import {
+  chevronDownOutline,
+  chevronUpOutline,
+  searchOutline,
+  addOutline,
+  chevronBackOutline,
+  lockClosedOutline,
+  reloadOutline,
+  closeOutline,
+  globeOutline,
+  arrowForwardOutline,
+  ellipsisVerticalOutline,
 } from 'ionicons/icons';
 
-import { Browser } from '@capacitor/browser'; 
 
 import { App } from 'src/models/app.model';
 import { XteriumApiService } from 'src/app/api/xterium-api/xterium-api.service';
 
 import { TranslatePipe } from '@ngx-translate/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { BrowserService } from 'src/app/api/browser/browser.service';
 
 
 @Component({
@@ -35,26 +60,80 @@ import { TranslatePipe } from '@ngx-translate/core';
     IonContent,
     IonIcon,
     IonSpinner,
+    // IonInput,
+    // IonButton,
+    IonModal,
+    IonList,
+    IonItem,
+    IonGrid,
+    IonRow,
+    IonCol,
     TranslatePipe,
   ],
 })
 export class ExplorePage implements OnInit {
+  @ViewChild('browserModal', { read: IonModal }) browserModal!: IonModal;
+
+  @ViewChild('webviewFrame') webviewRef!: ElementRef<HTMLIFrameElement>;
+  @ViewChild('urlInput') urlInputRef!: ElementRef<HTMLInputElement>;
+
   apps: App[] = [];
   featuredApps: App[] = [];
   trendingApps: App[] = [];
-  isLoading = false;
+  isLoading: boolean = false;
   error: string | null = null;
   trendingOpen = true;
+  searchUrl: string = '';
 
-  searchUrl = '';
+  tabCount: number = 1;
+  browserMenuOpen = false;
+
+  browserOpen: boolean = false;
+  browserUrl: string = '';
+  browserDisplayUrl: string = '';
+  browserSafeUrl!: SafeResourceUrl;
+  browserLoading: boolean = false;
+  browserBlocked: boolean = false;
 
   constructor(
-    private xteriumApiService: XteriumApiService
+    private xteriumApiService: XteriumApiService,
+    private browserService: BrowserService,
+    private sanitizer: DomSanitizer,
+    private cdr: ChangeDetectorRef
   ) {
     addIcons({
+      chevronDownOutline,
+      chevronUpOutline,
+      chevronBackOutline,
       searchOutline,
-      addOutline
+      ellipsisVerticalOutline,
+      addOutline,
+      globeOutline,
+      reloadOutline,
+      closeOutline,
+      lockClosedOutline,
+      arrowForwardOutline
     });
+  }
+
+  private categorizeApps(apps: App[]) {
+    this.featuredApps = apps;
+    this.trendingApps = apps.filter(a => (a.open_count ?? 0) > 0);
+  }
+
+  private extractDomain(url: string): string {
+    try {
+      return new URL(url).hostname.replace('www.', '');
+    } catch {
+      return url;
+    }
+  }
+
+  onTabCountClick() {
+  }
+
+  openBrowserMenu() {
+    this.browserModal.present();
   }
 
   loadApps() {
@@ -64,8 +143,7 @@ export class ExplorePage implements OnInit {
     this.xteriumApiService.getApps().subscribe({
       next: (data) => {
         this.apps = data;
-        this.featuredApps = data.slice(0, 3);
-        this.trendingApps = data.slice(3);
+        this.categorizeApps(data);
         this.isLoading = false;
       },
       error: (err) => {
@@ -76,17 +154,38 @@ export class ExplorePage implements OnInit {
     });
   }
 
-  async goToApp(url: string) {
-    const formattedUrl = url.startsWith('http') ? url : `https://${url}`;
-
-    await Browser.open({
-      url: formattedUrl,
-      presentationStyle: 'fullscreen',
-      toolbarColor: '#0a0a0a',
-    });
+  getInitial(name: string): string {
+    return name?.charAt(0).toUpperCase() ?? '?';
   }
 
-  async onSearchSubmit() {
+  toggleTrending() {
+    this.trendingOpen = !this.trendingOpen;
+  }
+
+  get activeInput(): string {
+    return this.browserOpen ? this.browserUrl : this.searchUrl;
+  }
+
+  set activeInput(val: string) {
+    if (this.browserOpen) {
+      this.browserUrl = val;
+    } else {
+      this.searchUrl = val;
+    }
+  }
+
+  goToApp(url: string, appId: string) {
+    this.xteriumApiService.incrementAppOpenCount(appId).subscribe({
+      next: () => {
+        this.loadApps();
+      }
+    });
+
+    const formatted = url.startsWith('http') ? url : `https://${url}`;
+    this.openBrowser(formatted);
+  }
+
+  onSearchSubmit() {
     const raw = this.searchUrl.trim();
     if (!raw) return;
 
@@ -95,21 +194,88 @@ export class ExplorePage implements OnInit {
       ? (raw.startsWith('http') ? raw : `https://${raw}`)
       : `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
 
-    await Browser.open({
-      url,
-      presentationStyle: 'fullscreen',
-      toolbarColor: '#0a0a0a',
-    });
-
+    this.openBrowser(url);
     this.searchUrl = '';
   }
 
-  getInitial(name: string): string {
-    return name?.charAt(0).toUpperCase() ?? '?';
+  openBrowser(url: string) {
+    this.browserUrl = url;
+    this.browserDisplayUrl = this.extractDomain(url);
+    this.browserLoading = true;
+    this.browserOpen = true;
+
+    this.browserService.open(url);
+
+    // if (!this.browserBlocked) {
+    //   this.browserSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+    // }
   }
 
-  toggleTrending() {
-    this.trendingOpen = !this.trendingOpen;
+  browserNavigate() {
+    const raw = this.browserUrl.trim();
+    if (!raw) return;
+
+    const isUrl = raw.includes('.') && !raw.includes(' ');
+    const url = isUrl
+      ? (raw.startsWith('http') ? raw : `https://${raw}`)
+      : `https://www.google.com/search?q=${encodeURIComponent(raw)}`;
+
+    this.browserUrl = url;
+    this.browserDisplayUrl = this.extractDomain(url);
+    this.browserLoading = true;
+
+    this.browserService.open(url);
+    
+    // if (!this.browserBlocked) {
+    //   this.browserSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl('about:blank');
+    //   setTimeout(() => {
+    //     this.browserSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+    //   }, 80);
+    // }
+
+    this.urlInputRef?.nativeElement.blur();
+  }
+
+  browserGoBack() {
+    try {
+      this.webviewRef.nativeElement.contentWindow?.history.back();
+    } catch {
+      this.closeBrowser();
+    }
+  }
+
+  browserRefresh() {
+    this.browserModal.dismiss();
+    const url = this.browserUrl;
+    this.browserLoading = true;
+    this.browserSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl('about:blank');
+    setTimeout(() => {
+      this.browserSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(url);
+    }, 80);
+  }
+
+  onFrameLoad() {
+    this.browserLoading = false;
+  }
+
+  async openExternal() {
+    await this.browserService.open(this.browserUrl);
+  }
+
+  closeBrowser() {
+    this.browserOpen = false;
+    this.browserUrl = '';
+    this.browserSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl('about:blank');
+    this.browserLoading = false;
+    this.browserBlocked = false;
+  }
+
+  closeTab() {
+    this.browserModal.dismiss().then(() => {
+      this.tabCount = Math.max(1, this.tabCount - 1);
+      this.closeBrowser();
+      this.cdr.detectChanges();
+    });
   }
 
   ngOnInit() {
