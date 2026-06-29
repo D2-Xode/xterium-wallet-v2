@@ -21,7 +21,8 @@ import {
   IonRow,
   IonGrid,
   IonItem,
-  IonList
+  IonList,
+  IonText,
 } from '@ionic/angular/standalone';
 
 import { addIcons } from 'ionicons';
@@ -68,6 +69,7 @@ import { BrowserService } from 'src/app/api/browser/browser.service';
     IonGrid,
     IonRow,
     IonCol,
+    IonText,
     TranslatePipe,
   ],
 })
@@ -140,7 +142,7 @@ export class ExplorePage implements OnInit {
     this.isLoading = true;
     this.error = null;
 
-    this.xteriumApiService.getApps().subscribe({
+    this.xteriumApiService.getPublishedApps().subscribe({
       next: (data) => {
         this.apps = data;
         this.categorizeApps(data);

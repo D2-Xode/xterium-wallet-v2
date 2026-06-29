@@ -8,7 +8,9 @@ import { App } from 'src/models/app.model';
   providedIn: 'root'
 })
 export class XteriumApiService {
-  private readonly apiUrl = environment.apiUrl;
+  // private readonly apiUrl = environment.apiUrl;
+  private readonly apiUrl = "https://api.xterium.app/api";
+
 
   constructor(
     private http: HttpClient
@@ -18,6 +20,10 @@ export class XteriumApiService {
     return this.http.get<App[]>(`${this.apiUrl}/apps`);
   }
   
+  getPublishedApps(): Observable<App[]> {
+    return this.http.get<App[]>(`${this.apiUrl}/apps/published`);
+  }
+
   incrementAppOpenCount(appId: string): Observable<App> {
     return this.http.patch<App>(`${this.apiUrl}/apps/${appId}/open`, {});
   }
