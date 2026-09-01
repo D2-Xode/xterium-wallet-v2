@@ -29,7 +29,7 @@ workflows:
       - name: Install CocoaPods
         script: |
           cd ios/App
-          pod install
+          pod install --repo-update
       - name: Set up keychain and import signing certificate
         script: |
           keychain initialize
