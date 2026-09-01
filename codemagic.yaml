@@ -33,6 +33,9 @@ workflows:
       - name: Set up keychain and import signing certificate
         script: |
           keychain initialize
+          echo "CM_CERTIFICATE length: ${#CM_CERTIFICATE}"
+          echo "CM_CERTIFICATE_PASSWORD length: ${#CM_CERTIFICATE_PASSWORD}"
+          echo "CM_PROVISIONING_PROFILE length: ${#CM_PROVISIONING_PROFILE}"
           echo "$CM_CERTIFICATE" | tr -d '[:space:]' | base64 --decode > /tmp/certificate.p12
           if [ ! -s /tmp/certificate.p12 ]; then
             echo "ERROR: /tmp/certificate.p12 is empty after decoding CM_CERTIFICATE." >&2
