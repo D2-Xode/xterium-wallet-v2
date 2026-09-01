@@ -33,11 +33,21 @@ workflows:
       - name: Set up keychain and import signing certificate
         script: |
           keychain initialize
-          echo $CM_CERTIFICATE | base64 --decode > /tmp/certificate.p12
+          echo "$CM_CERTIFICATE" | tr -d '[:space:]' | base64 --decode > /tmp/certificate.p12
+          if [ ! -s /tmp/certificate.p12 ]; then
+            echo "ERROR: /tmp/certificate.p12 is empty after decoding CM_CERTIFICATE." >&2
+            echo "The CM_CERTIFICATE env var likely does not contain a complete, valid base64 string." >&2
+            exit 1
+          fi
+          file /tmp/certificate.p12
           keychain add-certificates --certificate /tmp/certificate.p12 --certificate-password "$CM_CERTIFICATE_PASSWORD"
       - name: Install provisioning profile
         script: |
-          echo $CM_PROVISIONING_PROFILE | base64 --decode > /tmp/profile.mobileprovision
+          echo "$CM_PROVISIONING_PROFILE" | tr -d '[:space:]' | base64 --decode > /tmp/profile.mobileprovision
+          if [ ! -s /tmp/profile.mobileprovision ]; then
+            echo "ERROR: /tmp/profile.mobileprovision is empty after decoding CM_PROVISIONING_PROFILE." >&2
+            exit 1
+          fi
           PROFILES_HOME="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFILES_HOME"
           cp /tmp/profile.mobileprovision "$PROFILES_HOME"
