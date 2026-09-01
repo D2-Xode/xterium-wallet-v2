@@ -10,7 +10,7 @@ workflows:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "com.xterium.wallet"
-      node: 20.11.0
+      node: 20.19.0
       xcode: latest
       cocoapods: default
     triggering:
