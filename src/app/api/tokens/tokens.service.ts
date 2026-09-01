@@ -20,6 +20,7 @@ export class TokensService {
     USDT: 'assets/images/tokens/usdt.png',
     DON: 'assets/images/tokens/don.png',
     HUG: 'assets/images/tokens/hug.png',
+    XAV: 'assets/images/tokens/xav.png',
     DEFAULT: 'assets/images/tokens/default.png',
   }
 

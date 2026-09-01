@@ -111,7 +111,7 @@ export class ChainsService {
       name: "Polaris",
       description: "Xode's devnet parachain on Rococo for testing purposes.",
       chain_id: 2000,
-      genesis_hash: "0x9cd4eb3af767b8ab4929576a0773ee37ab997fdb159e2e470e156f7388f21c78",
+      genesis_hash: "0xcf724a845903bfe5c333c49d618b9bd65a955c7f357094e86f5fd85b7d0c16d6",
       unit: "XON",
       decimal: 12,
       chain_type: ChainType.Substrate,
